@@ -1,4 +1,4 @@
-const writeEvent = (text) => {
+const log = (text) => {
   const parent = document.querySelector('#events');
   const el = document.createElement('li');
   el.innerHTML = text;
@@ -7,20 +7,23 @@ const writeEvent = (text) => {
   parent.scrollTop = parent.scrollHeight;
 };
 
-const onChatSubmitted = (e) => {
+const onChatSubmitted = (sock) => (e) => {
   e.preventDefault();
 
   const input = document.querySelector('#chat');
   const text = input.value;
   input.value = '';
-
-  writeEvent(text);
+  sock.emit('message', text);
 };
 
 (() => {
-  writeEvent('welcome');
+
+  log('welcome');
+  const sock = io();
+  sock.on('connect', () => log('connected'));
+  sock.on('message', log);
 
   document
     .querySelector('#chat-form')
-    .addEventListener('submit', onChatSubmitted);
+    .addEventListener('submit', onChatSubmitted(sock));
 })();
