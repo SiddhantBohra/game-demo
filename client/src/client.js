@@ -16,68 +16,96 @@ const onChatSubmitted = (sock) => (e) => {
   sock.emit('message', text);
 };
 
-const drawGrid = (ctx, numCells, cellSize) => {
+const createBoard = (canvas, numCells) => {
+  const ctx = canvas.getContext('2d');
+  const cellSize = Math.floor(Math.min(canvas.width, canvas.height)/numCells);
 
-  ctx.strokeWidth = 7;
-  ctx.strokeStyle = '#333333';
+  const drawGrid = () => {
+    ctx.strokeWidth = 7;
+    ctx.strokeStyle = '#333333';
 
-  ctx.beginPath();
+    ctx.beginPath();
 
-  for (let i = 0; i < numCells + 1; i++) {
-    ctx.moveTo(cellSize*i, 0);
-    ctx.lineTo(cellSize*i, 400);
+    for (let i = 0; i < numCells + 1; i++) {
+      ctx.moveTo(cellSize*i, 0);
+      ctx.lineTo(cellSize*i, 400);
 
-    ctx.moveTo(0, cellSize*i);
-    ctx.lineTo(400, cellSize*i);
-  }
-  ctx.stroke();
+      ctx.moveTo(0, cellSize*i);
+      ctx.lineTo(400, cellSize*i);
+    }
+    ctx.stroke();
+  };
+
+  const fillCell = (x, y, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+  };
+
+  const clear = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const reset = (board) => {
+    clear();
+    drawGrid();
+
+    if (!board) {
+      return;
+    }
+
+    board.forEach((row, y) => {
+      row.forEach((color, x) => {
+        color && fillCell(x, y, color);
+      });
+    });
+  };
+
+  const getCellForCoordinates = (x, y) => ({
+    x: Math.floor(x/cellSize),
+    y: Math.floor(y/cellSize)
+  });
+
+  return {
+    fillCell,
+    reset,
+    getCellForCoordinates
+  };
 };
+
+const randomColor = () => `#${Math.floor(Math.random()*16777215).toString(16)}`;
 
 (() => {
   log('welcome');
+  const sock = io();
   const canvas = document.querySelector('canvas');
-  const ctx = canvas.getContext('2d');
-
-  const myColor = `#${Math.floor(Math.random()*16777215).toString(16)}`;
+  const myColor = randomColor();
   const numCells = 20;
-  const cellSize = Math.floor(Math.min(canvas.width, canvas.height)/numCells);
 
-  drawGrid(ctx, numCells, cellSize);
-  const handleClick = (x, y) => {
-    const cellX = Math.floor(x/cellSize);
-    const cellY = Math.floor(y/cellSize);
-    sock.emit('turn', { x: cellX, y: cellY, color: myColor });
-  };
+  const {
+    fillCell,
+    reset,
+    getCellForCoordinates
+  } = createBoard(canvas, numCells);
 
-  canvas.addEventListener('click', (e) => {
+  const onCanvasClick = (e) => {
     const { top, left } = canvas.getBoundingClientRect();
     const { clientX, clientY } = e;
-    handleClick(clientX - left, clientY - top);
-  });
+    const { x, y } = getCellForCoordinates(clientX - left, clientY - top);
+    sock.emit('turn', { x, y, color: myColor });
+  };
 
-  const sock = io();
   sock.on('connect', () => log('connected'));
-  sock.on('board',  (board) => {
-    board.forEach(
-      (row, y) => row.forEach((color, x) => {
-        if (color) {
-          ctx.fillStyle = color;
-          ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
-        }
-      }))
-  });
-  sock.on('turn', ({ x, y, color }) => {
-    ctx.fillStyle = color;
-    ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
-  });
+  sock.on('message', log);
+  sock.on('board', reset);
+  sock.on('turn', ({ x, y, color }) => fillCell(x, y, color));
   sock.on('reset', () => {
     log('new round');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawGrid(ctx, numCells, cellSize);
+    reset();
   });
-  sock.on('message', log);
 
   document
     .querySelector('#chat-form')
     .addEventListener('submit', onChatSubmitted(sock));
+
+  canvas.addEventListener('click', onCanvasClick);
 })();
