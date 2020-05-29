@@ -46,7 +46,7 @@ const drawGrid = (ctx, numCells, cellSize) => {
   const handleClick = (x, y) => {
     const cellX = Math.floor(x/cellSize);
     const cellY = Math.floor(y/cellSize);
-    sock.emit('click', { x: cellX, y: cellY, color: myColor });
+    sock.emit('turn', { x: cellX, y: cellY, color: myColor });
   };
 
   canvas.addEventListener('click', (e) => {
@@ -57,9 +57,23 @@ const drawGrid = (ctx, numCells, cellSize) => {
 
   const sock = io();
   sock.on('connect', () => log('connected'));
-  sock.on('click', ({ x, y, color }) => {
+  sock.on('board',  (board) => {
+    board.forEach(
+      (row, y) => row.forEach((color, x) => {
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+        }
+      }))
+  });
+  sock.on('turn', ({ x, y, color }) => {
     ctx.fillStyle = color;
     ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+  });
+  sock.on('reset', () => {
+    log('new round');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGrid(ctx, numCells, cellSize);
   });
   sock.on('message', log);
 
