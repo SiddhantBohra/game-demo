@@ -15,7 +15,7 @@ const io = socketio(server);
 io.on('connection', (sock) => {
   console.log('someone connected');
   sock.on('message', (text) => io.emit('message', text));
-
+  sock.on('click', (rect) => io.emit('click', rect));
 });
 
 server.on('error', (err) => {
