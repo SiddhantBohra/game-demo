@@ -38,7 +38,14 @@ const createBoard = (canvas) => {
 
   const { fillRect } = createBoard(canvas);
 
-  fillRect(100, 100);
+  const onCanvasClick = (e) => {
+    const { top, left } = canvas.getBoundingClientRect();
+    const { clientX, clientY } = e;
+    const x = clientX - left;
+    const y = clientY - top;
+
+    fillRect(x, y);
+  };
 
   sock.on('connect', () => log('connected'));
   sock.on('message', log);
@@ -46,4 +53,6 @@ const createBoard = (canvas) => {
   document
     .querySelector('#chat-form')
     .addEventListener('submit', onChatSubmitted(sock));
+
+  canvas.addEventListener('click', onCanvasClick);
 })();
