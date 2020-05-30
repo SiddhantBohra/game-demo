@@ -17,22 +17,34 @@ const onChatSubmitted = (sock) => (e) => {
   sock.emit('message', text);
 };
 
-const randomColor = () => {
-  const maxColors = 16777215;
-  const value = Math.floor(Math.random()*maxColors).toString(16);
-  return `#${value}`;
-};
-
-const createBoard = (canvas) => {
+const createBoard = (canvas, numCells) => {
   const ctx = canvas.getContext('2d');
+
+  const cellSize = Math.floor(Math.min(canvas.width, canvas.height)/numCells);
 
   const fillRect = (x, y, color) => {
     ctx.fillStyle = color;
     ctx.fillRect(x - 10, y - 10, 20, 20);
   };
 
+  const drawGrid = () => {
+    ctx.strokeStyle = '#333';
+
+    ctx.beginPath();
+
+    for (let i = 0; i < numCells + 1; i++) {
+      ctx.moveTo(i*cellSize, 0);
+      ctx.lineTo(i*cellSize, numCells*cellSize);
+
+      ctx.moveTo(0, i*cellSize);
+      ctx.lineTo(numCells*cellSize, i*cellSize);
+    }
+    ctx.stroke();
+  };
+
   return {
-    fillRect
+    fillRect,
+    drawGrid
   };
 };
 
@@ -41,9 +53,8 @@ const createBoard = (canvas) => {
 
   const sock = io();
   const canvas = document.querySelector('canvas');
-  const tokenColor = randomColor();
 
-  const { fillRect } = createBoard(canvas);
+  const { fillRect, drawGrid } = createBoard(canvas, 20);
 
   const onCanvasClick = (e) => {
     const { top, left } = canvas.getBoundingClientRect();
@@ -51,8 +62,10 @@ const createBoard = (canvas) => {
     const x = clientX - left;
     const y = clientY - top;
 
-    sock.emit('turn', { x, y, color: tokenColor });
+    sock.emit('turn', { x, y });
   };
+
+  drawGrid();
 
   sock.on('connect', () => log('connected'));
   sock.on('message', log);
