@@ -26,8 +26,14 @@ io.on('connection', (sock) => {
   sock.on('message', (text) => io.emit('message', text));
   sock.on('turn', ({ x, y }) => {
     if (cooldown()) {
-      makeTurn(x, y, color);
+      const playerWon = makeTurn(x, y, color);
       io.emit('turn', { x, y, color });
+
+      if (playerWon) {
+        sock.emit('message', 'YOU WIN');
+        io.emit('message', 'new round');
+        io.emit('board');
+      }
     }
   });
 
