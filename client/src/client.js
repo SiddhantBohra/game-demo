@@ -17,12 +17,18 @@ const onChatSubmitted = (sock) => (e) => {
   sock.emit('message', text);
 };
 
+const randomColor = () => {
+  const maxColors = 16777215;
+  const value = Math.floor(Math.random()*maxColors).toString(16);
+  return `#${value}`;
+};
+
 const createBoard = (canvas) => {
   const ctx = canvas.getContext('2d');
 
-  const fillRect = (x, y) => {
-    ctx.fillStyle = '#cc4a73';
-    ctx.fillRect(x, y, 50, 50);
+  const fillRect = (x, y, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 10, y - 10, 20, 20);
   };
 
   return {
@@ -35,6 +41,7 @@ const createBoard = (canvas) => {
 
   const sock = io();
   const canvas = document.querySelector('canvas');
+  const tokenColor = randomColor();
 
   const { fillRect } = createBoard(canvas);
 
@@ -44,11 +51,12 @@ const createBoard = (canvas) => {
     const x = clientX - left;
     const y = clientY - top;
 
-    fillRect(x, y);
+    sock.emit('turn', { x, y, color: tokenColor });
   };
 
   sock.on('connect', () => log('connected'));
   sock.on('message', log);
+  sock.on('turn', ({ x, y, color }) => fillRect(x, y, color));
 
   document
     .querySelector('#chat-form')
