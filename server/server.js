@@ -2,6 +2,7 @@ const http = require('http');
 const express = require('express');
 const socketio = require('socket.io');
 const randomColor = require('randomcolor');
+const createBoard = require('./create-board');
 
 const app = express();
 const clientPath = `${__dirname}/../client`;
@@ -12,13 +13,20 @@ app.use(express.static(clientPath));
 
 const server = http.createServer(app);
 const io = socketio(server);
+const { getBoard, makeTurn } = createBoard(20);
 
 io.on('connection', (sock) => {
   const color = randomColor();
 
   console.log('someone connected');
+  sock.emit('board', getBoard());
+
   sock.on('message', (text) => io.emit('message', text));
-  sock.on('turn', ({ x, y }) => io.emit('turn', { x, y, color }));
+  sock.on('turn', ({ x, y }) => {
+    makeTurn(x, y, color);
+    io.emit('turn', { x, y, color });
+  });
+
 });
 
 server.on('error', (err) => {
