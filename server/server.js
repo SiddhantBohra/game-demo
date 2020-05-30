@@ -3,6 +3,7 @@ const express = require('express');
 const socketio = require('socket.io');
 const randomColor = require('randomcolor');
 const createBoard = require('./create-board');
+const createCooldown = require('./create-cooldown');
 
 const app = express();
 const clientPath = `${__dirname}/../client`;
@@ -17,14 +18,17 @@ const { getBoard, makeTurn } = createBoard(20);
 
 io.on('connection', (sock) => {
   const color = randomColor();
+  const cooldown = createCooldown(2000);
 
   console.log('someone connected');
   sock.emit('board', getBoard());
 
   sock.on('message', (text) => io.emit('message', text));
   sock.on('turn', ({ x, y }) => {
-    makeTurn(x, y, color);
-    io.emit('turn', { x, y, color });
+    if (cooldown()) {
+      makeTurn(x, y, color);
+      io.emit('turn', { x, y, color });
+    }
   });
 
 });
